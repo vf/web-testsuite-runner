@@ -1,12 +1,12 @@
 /*
 	Copyright 2010-2011 Vodafone Group Services GmbH
-	
+
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
 	You may obtain a copy of the License at
-	
+
 		http://www.apache.org/licenses/LICENSE-2.0
-	
+
 	Unless required by applicable law or agreed to in writing, software
 	distributed under the License is distributed on an "AS IS" BASIS,
 	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,7 +16,7 @@
 doh.ui = {
 	// summary: This object contains the functions that are responsible for rendering out the results of each test.
 	// description: Override this object or the funtion(s) you need to override.
-	
+
 	results:[],
 
 	started:function(){
@@ -30,7 +30,7 @@ doh.ui = {
 		// summary: Called before a group's tests get executed.
 		ui.groupHeader(group.name, group.tests.length);
 	},
-	
+
 	groupFinished:function(group){
 		// summary: After all group's tests ran.
 		//console.log(group.numTestsExecuted + " tests ran, " +
@@ -38,11 +38,11 @@ doh.ui = {
 		//			group.numErrors + " errors");
 		//console.log("--------");
 	},
-	
+
 	testStarted:function(group, test){
 		// summary: Before a test's test() method is executed.
 	},
-	
+
 	testFailure:function(group, test, error){
 		// summary: After a test failed.
 		var out = "";
@@ -53,14 +53,14 @@ doh.ui = {
 		}
 		ui.failure(test, error);
 	},
-	
+
 	testError:function(group, test, error){
 		// summary: After a test failed.
 		ui.error(test, error);
 	},
-	
+
 	testFinished:function(group, test, success){
-		// summary: 
+		// summary:
 		if (success){
 			ui.success(test);
 		}
@@ -70,11 +70,11 @@ doh.ui = {
 		embed.query(".statusBar .numTestsDone")[0].innerHTML = doh._numTestsExecuted;
 		ui.resetInfo();
 	},
-	
+
 	storeResult:function(resultData){
 		this.results.push(resultData);
 	},
-	
+
 	showStats:function(){
 		var node = document.getElementById("statsOverlay"); // Fill the stats in here.
 		node.innerHTML = ""; // Empty it first, multiple calls would add the same content again.
@@ -96,14 +96,16 @@ doh.ui = {
 		// as a property in the create() doesnt work :(
 		embed.connect(embed.create("button", {innerHTML:"Close"}, node), "onclick", function(){ doh.ui.hideStats() });
 	},
-	
+
 	hideStats:function(){
 		var node = document.getElementById("statsOverlay");
 		node.style.display = "none";
 	},
-	
+
 	report:function(){
-		// summary: 
+		return; //TODO: single this out and put into VF-Testsuite
+
+		// summary:
 		ui.report(doh._numTests, doh._groups.length, doh._numErrors, doh._numFailures, doh._numNotApplicable);
 		var infoData = [
 			"window.navigator.appCodeName",
@@ -177,14 +179,14 @@ doh.ui = {
 			if (obj && (typeof obj=="function" || typeof obj=="object")){
 				obj = ""+obj;
 			}
-			info[d] = obj;	
+			info[d] = obj;
 		}
 		// ******************
 		// The version of the data structure we send to the server to store the data
 		// If any of the data change, update this version!!!!!!!!!!!
 		// ******************
 		info.__version__ = 20110104;
-		
+
 		if (confirm("Click OK to send the test results to 'developer.vodafone.com'")){
 			var el = embed.query(".report .sendingResults")[0];
 			el.style.display = "block";
