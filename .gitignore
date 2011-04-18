@@ -1,2 +1,4 @@
 *.kpf
 *.komodoproject
+.komodotools
+.DS_Store
