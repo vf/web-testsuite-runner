@@ -1,8 +1,8 @@
 var xmlHelper = {
 	// summary: This object encapsulates functions for handling our XML files (like the config.xml file).
-	
+
 	header:"",
-	
+
 	getXmlObject:function(config, features){
 		// summary: Create and return the XML object which represents the config.xml in order to manipulate it in any way.
 		// config: Object
@@ -12,13 +12,13 @@ var xmlHelper = {
 		// Remove the first line, since that is the <?xml...> which E4X can't handle yet, we will add it later again.
 		this.header = rawConfigXml.split("\n")[0];
 		var configXml = rawConfigXml.split("\n").slice(1).join("\n");
-		
+
 		default xml namespace = config.defaultNamespace;
 		var ret = new XML(configXml);
 		ret = this.addFeatureTags(ret, features);
 		return ret;
 	},
-	
+
 	addFeatureTags:function(xml, features){
 		// summary: Add the given feature tags to the xml object.
 		//
@@ -30,7 +30,7 @@ var xmlHelper = {
 		// 		xml object.
 		// 		The values are just the API names, e.g. like so
 		// 		["multimedia", "account", "config"]
-		
+
 		// Just for the Nokia it has to be before AudioPlayer *cough*
 		var possibleFeatures = [
 			"http://jil.org/jil/api/1.1/multimedia",
@@ -54,7 +54,7 @@ var xmlHelper = {
 			"http://jil.org/jil/api/1.1/powerinfo",
 			"http://jil.org/jil/api/1.1/positioninfo",
 			"http://jil.org/jil/api/1.1/widget",
-		
+
 			"http://jil.org/jil/api/1.1.1/datanetworkinfo",
 			"http://jil.org/jil/api/1.1.1/file",
 			"http://jil.org/jil/api/1.1.1/radioinfo",
@@ -62,12 +62,12 @@ var xmlHelper = {
 			"http://jil.org/jil/api/1.1.1/telephony",
 			"http://jil.org/jil/api/1.1.1/callrecordtypes",
 			"http://jil.org/jil/api/1.1.1/widgetmanager",
-		
+
 			"http://jil.org/jil/api/1.1.2/camera",
 			"http://jil.org/jil/api/1.1.2/videoplayer",
-		
+
 			"http://jil.org/jil/api/1.1.4/messagefoldertypes",
-		
+
 			"http://jil.org/jil/api/1.1.5/applicationtypes",
 			"http://jil.org/jil/api/1.1.5/exception",
 			"http://jil.org/jil/api/1.1.5/exceptiontypes",
@@ -93,10 +93,10 @@ var xmlHelper = {
 		}
 		return xml;
 	},
-	
+
 	_renderConfigTemplate: function(tplString, variables){
 		// summary: Replace placeholders like {x} in the tplString file.
-	
+
 		// It can also be done using XML Literal Interpolation (see http://rephrase.net/days/07/06/e4x)
 		// but that seems simpler for now ... would love to learn better.
 		var ret = tplString;
