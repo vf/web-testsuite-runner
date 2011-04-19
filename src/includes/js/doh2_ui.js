@@ -103,7 +103,7 @@ doh.ui = {
 	},
 
 	report:function(){
-		return; //TODO: single this out and put into VF-Testsuite
+		//return; //TODO: single this out and put into VF-Testsuite
 
 		// summary:
 		ui.report(doh._numTests, doh._groups.length, doh._numErrors, doh._numFailures, doh._numNotApplicable);
