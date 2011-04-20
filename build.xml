@@ -19,26 +19,19 @@
 	<description>
 		Packages the jil-api-test widgets
 	</description>
-	
-	<!-- include antcontrib to enable additional tasks like foreach or popertyregexp -->
-	<taskdef resource="net/sf/antcontrib/antlib.xml">
-		<classpath>
-			<pathelement location="${basedir}/util/ant-contrib-1.0b3.jar"/>
-		</classpath>
-	</taskdef>
-	
-<!-- 
-	set some directories 
+
+<!--
+	set some directories
 -->
 	<!-- test runner source code -->
 	<property name="dirs.src" location="${basedir}/src"/>
-	
+
 	<!-- tools -->
 	<property name="dirs.tools" location="${basedir}/tools"/>
 
 	<!-- util sources -->
 	<property name="dirs.util-src" location="${dirs.src}/util"/>
-	
+
 	<!-- test sources -->
 	<property name="dirs.test-src" location="${user.dir}"/>
 
@@ -56,7 +49,127 @@
 
 	<property name="defaults.buildtarget" value="-build-html"/>
 	
-<!-- 
+<!-- Macros/Tasks -->
+	<!-- include antcontrib to enable additional tasks like foreach or popertyregexp -->
+	<taskdef resource="net/sf/antcontrib/antlib.xml">
+		<classpath>
+			<pathelement location="${basedir}/util/ant-contrib-1.0b3.jar"/>
+		</classpath>
+	</taskdef>
+	
+	<!-- rhino templating for index.html/config.xml -->
+	<macrodef name="rhinotpl">
+		<attribute name="templatefile"/>
+		<attribute name="outfile"/>
+		<attribute name="testfile"/>
+		<sequential>
+			<!--
+				Do the E4X magic, which means throw index.html.tpl into a Rhino (js.jar)
+				and	let it create index.html.
+			-->
+			
+			<var name="rhinotpl.basename" unset="true"/>
+			<basename file="@{templatefile}" suffix=".tpl" property="rhinotpl.basename"/>
+			
+			<var name="rhinotpl.script" unset="true"/>
+			<property name="rhinotpl.script" location="${dirs.test-src}/${test}.${rhinotpl.basename}.js"/>
+			
+			<!-- check if {test}.index.html.js-file for given test is available (use default if not)-->
+			<if>
+				<not>
+					<available file="${rhinotpl.script}"/>
+				</not>
+				<then>
+					<var name="rhinotpl.script" unset="true"/>
+					<property name="rhinotpl.script" location="${dirs.src}/${rhinotpl.basename}.js"/>
+				</then>
+			</if>
+
+			<java jar="${dirs.tools}/js.jar" fork="true">
+				<!-- list all the js files here in the order they need to be loaded -->
+				<arg line="-f ${dirs.tools}/js/console.js"/>
+				<arg line="-f ${dirs.tools}/js/util.js"/>
+				<arg line="-f ${dirs.tools}/js/config.js"/>
+				<arg line="-f ${dirs.tools}/js/xmlHelper.js"/>
+				<!--<arg value="src/tests/base/widget-update/update0.config.xml.js"/>-->
+				<arg line="-f ${rhinotpl.script}"/>
+				<arg line="-f ${dirs.tools}/js/file.js"/>
+				<arg line="${dirs.tools}/js/writeRenderedFile.js"/>
+
+				<!--arguments passed to the Rhino-->
+				<!-- template file -->
+				<arg line="@{templatefile}"/>
+
+				<!-- outfile -->
+				<arg line="@{outfile}"/>
+
+				<!-- The JavaScript test file, e.g. /src/tests/base/window.js -->
+				<arg line="@{testfile}"/>
+			</java>
+		</sequential>
+	</macrodef>
+	
+	<!-- copy test runner includes/resources -->
+	<macrodef name="copytestrunner">
+		<attribute name="todir"/>
+		<sequential>
+			<copy todir="@{todir}/_testsuite_" preservelastmodified="true">
+				<fileset dir="${dirs.src}/includes">
+					<include name="css/**"/>
+					<include name="img/**"/>
+					<include name="js/**"/>
+				</fileset>
+			</copy>
+		</sequential>
+	</macrodef>
+	
+	<!-- copy resources needed by a test -->
+	<macrodef name="copyresources">
+		<attribute name="test"/>
+		<attribute name="todir"/>
+		<sequential>
+			<if>
+				<available file="${dirs.test-src}/@{test}.js.resources"/>
+				<then>
+					<propertyregex 
+						property="copyresources.testdir"
+						override="true"
+						input="@{test}"
+						regexp="[^/]*$"
+						replace=""
+						defaultValue=""/>
+					
+					<var name="copyresources.filelist" unset="true"/>
+					<tempfile property="copyresources.filelist" destdir="${dirs.tmp}"/>
+					<copy file="${dirs.test-src}/@{test}.js.resources" tofile="${copyresources.filelist}">
+						<filterchain>
+							<ignoreblank/>
+							<trim/>
+							<scriptfilter language="javascript">
+<![CDATA[
+	var token = self.getToken(), prefix = project.getProperty("copyresources.testdir");
+	var filesep = project.getProperty("file.separator"); 
+	var dirsTarget = token.split(filesep);
+	var dirsTest = prefix.split(filesep);
+	for(var i = 0; dirsTarget[i] == ".."; i++);
+								
+	self.setToken(dirsTest.slice(0, dirsTest.length - i).concat(dirsTarget.slice(i)).join(filesep));
+]]>
+							</scriptfilter>
+						</filterchain>
+					</copy>
+
+					<copy todir="@{todir}" verbose="true" flatten="true">
+						<fileset dir="${dirs.test-src}" includesfile="${copyresources.filelist}"/>
+					</copy>
+					
+					<delete file="${copyresources.filelist}"/>
+				</then>
+			</if>
+		</sequential>
+	</macrodef>
+
+<!--
 	public targets
 -->
 	<target name="default" description="Builds a single test (if defined) or outputs a help message.">
