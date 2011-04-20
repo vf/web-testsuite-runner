@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 	Copyright 2010-2011 Vodafone Group Services GmbH
-	
+
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
 	You may obtain a copy of the License at
-	
+
 		http://www.apache.org/licenses/LICENSE-2.0
-	
+
 	Unless required by applicable law or agreed to in writing, software
 	distributed under the License is distributed on an "AS IS" BASIS,
 	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,7 +19,37 @@
 	<description>
 		Packages the jil-api-test widgets
 	</description>
+
+<!--
+	set some directories
+-->
+	<!-- test runner source code -->
+	<property name="dirs.src" location="${basedir}/src"/>
+
+	<!-- tools -->
+	<property name="dirs.tools" location="${basedir}/tools"/>
+
+	<!-- util sources -->
+	<property name="dirs.util-src" location="${dirs.src}/util"/>
+
+	<!-- test sources -->
+	<property name="dirs.test-src" location="${user.dir}"/>
+
+	<!-- dist dir for built tests -->
+	<property name="dirs.dist" location="${dirs.test-src}/dist"/>
+
+	<!-- dist dir for built html tests -->
+	<property name="dirs.dist-html" location="${dirs.dist}"/>
 	
+	<!-- dist dir for built test widgets -->
+	<property name="dirs.dist-widget" location="${dirs.dist}"/>
+
+	<!-- tmp files -->
+	<property name="dirs.tmp" location="${dirs.test-src}/_tmp_" description="temporary folder to use, during build-process"/>
+
+	<property name="defaults.buildtarget" value="-build-html"/>
+	
+<!-- Macros/Tasks -->
 	<!-- include antcontrib to enable additional tasks like foreach or popertyregexp -->
 	<taskdef resource="net/sf/antcontrib/antlib.xml">
 		<classpath>
@@ -27,30 +57,119 @@
 		</classpath>
 	</taskdef>
 	
-<!-- 
-	set some directories 
--->
-	<!-- test runner source code -->
-	<property name="dirs.src" location="${basedir}/src"/>
-	
-	<!-- tools -->
-	<property name="dirs.tools" location="${basedir}/tools"/>
+	<!-- rhino templating for index.html/config.xml -->
+	<macrodef name="rhinotpl">
+		<attribute name="templatefile"/>
+		<attribute name="outfile"/>
+		<attribute name="testfile"/>
+		<sequential>
+			<!--
+				Do the E4X magic, which means throw index.html.tpl into a Rhino (js.jar)
+				and	let it create index.html.
+			-->
+			
+			<var name="rhinotpl.basename" unset="true"/>
+			<basename file="@{templatefile}" suffix=".tpl" property="rhinotpl.basename"/>
+			
+			<var name="rhinotpl.script" unset="true"/>
+			<property name="rhinotpl.script" location="${dirs.test-src}/${test}.${rhinotpl.basename}.js"/>
+			
+			<!-- check if {test}.index.html.js-file for given test is available (use default if not)-->
+			<if>
+				<not>
+					<available file="${rhinotpl.script}"/>
+				</not>
+				<then>
+					<var name="rhinotpl.script" unset="true"/>
+					<property name="rhinotpl.script" location="${dirs.src}/${rhinotpl.basename}.js"/>
+				</then>
+			</if>
 
-	<!-- util sources -->
-	<property name="dirs.util-src" location="${dirs.src}/util"/>
+			<java jar="${dirs.tools}/js.jar" fork="true">
+				<!-- list all the js files here in the order they need to be loaded -->
+				<arg line="-f ${dirs.tools}/js/console.js"/>
+				<arg line="-f ${dirs.tools}/js/util.js"/>
+				<arg line="-f ${dirs.tools}/js/config.js"/>
+				<arg line="-f ${dirs.tools}/js/xmlHelper.js"/>
+				<!--<arg value="src/tests/base/widget-update/update0.config.xml.js"/>-->
+				<arg line="-f ${rhinotpl.script}"/>
+				<arg line="-f ${dirs.tools}/js/file.js"/>
+				<arg line="${dirs.tools}/js/writeRenderedFile.js"/>
+
+				<!--arguments passed to the Rhino-->
+				<!-- template file -->
+				<arg line="@{templatefile}"/>
+
+				<!-- outfile -->
+				<arg line="@{outfile}"/>
+
+				<!-- The JavaScript test file, e.g. /src/tests/base/window.js -->
+				<arg line="@{testfile}"/>
+			</java>
+		</sequential>
+	</macrodef>
 	
-	<!-- test sources -->
-	<property name="dirs.test-src" location="${user.dir}"/>
+	<!-- copy test runner includes/resources -->
+	<macrodef name="copytestrunner">
+		<attribute name="todir"/>
+		<sequential>
+			<copy todir="@{todir}/_testsuite_" preservelastmodified="true">
+				<fileset dir="${dirs.src}/includes">
+					<include name="css/**"/>
+					<include name="img/**"/>
+					<include name="js/**"/>
+				</fileset>
+			</copy>
+		</sequential>
+	</macrodef>
 	
-	<!-- built widgets -->
-	<property name="dirs.dist" location="${dirs.test-src}"/>
-	
-	<!-- tmp files -->
-	<property name="tmp" location="${dirs.test-src}/_tmp_" description="temporary folder to use, during build-process"/>
-	
-	<property name="defaults.buildtarget" value="-build-html"/>
-	
-<!-- 
+	<!-- copy resources needed by a test -->
+	<macrodef name="copyresources">
+		<attribute name="test"/>
+		<attribute name="todir"/>
+		<sequential>
+			<if>
+				<available file="${dirs.test-src}/@{test}.js.resources"/>
+				<then>
+					<propertyregex 
+						property="copyresources.testdir"
+						override="true"
+						input="@{test}"
+						regexp="[^/]*$"
+						replace=""
+						defaultValue=""/>
+					
+					<var name="copyresources.filelist" unset="true"/>
+					<tempfile property="copyresources.filelist" destdir="${dirs.tmp}"/>
+					<copy file="${dirs.test-src}/@{test}.js.resources" tofile="${copyresources.filelist}">
+						<filterchain>
+							<ignoreblank/>
+							<trim/>
+							<scriptfilter language="javascript">
+<![CDATA[
+	var token = self.getToken(), prefix = project.getProperty("copyresources.testdir");
+	var filesep = project.getProperty("file.separator"); 
+	var dirsTarget = token.split(filesep);
+	var dirsTest = prefix.split(filesep);
+	for(var i = 0; dirsTarget[i] == ".."; i++);
+								
+	self.setToken(dirsTest.slice(0, dirsTest.length - i).concat(dirsTarget.slice(i)).join(filesep));
+]]>
+							</scriptfilter>
+						</filterchain>
+					</copy>
+
+					<copy todir="@{todir}" verbose="true" flatten="true">
+						<fileset dir="${dirs.test-src}" includesfile="${copyresources.filelist}"/>
+					</copy>
+					
+					<delete file="${copyresources.filelist}"/>
+				</then>
+			</if>
+		</sequential>
+	</macrodef>
+
+<!--
 	public targets
 -->
 	<target name="default" description="Builds a single test (if defined) or outputs a help message.">
@@ -64,25 +183,25 @@
 			</else>
 		</if>
 	</target>
-	
+
 	<target name="help" description="Output a usage message.">
 	<echo>
 	HELP:
 	=====
-	    	  	
-	Run from the tests directory with 
+
+	Run from the tests directory with
 	    ant -f &lt;path/to/build.xml&gt; &lt;options&gt;
-	    	  	
-	However, the test source directory can be set manually via the 
+
+	However, the test source directory can be set manually via the
 	`dirs.test-src` property.
-	    	  	
-	
+
+
 	Examples:
 	=========
-	
+
 	Build a single test:
 	    ant -f  &lt;path/to/build.xml&gt; -Dtest=&lt;testname&gt; (e.g. ant -Dtest=jil/File)
-	
+
 	Build all tests: ant all
 	    ant -f  &lt;path/to/build.xml&gt; all
 </echo>
@@ -90,7 +209,7 @@
 
 	<target name="all" description="This target builds widgets for all tests." depends="-collectTestNames">
 		<echo level="info">### Building all tests ###</echo>
-		<for list="${test.names}" param="test.name" delimiter=";">
+		<for list="${test.names}" param="test.name" delimiter="${line.separator}">
 			<sequential>
 				<antcall target="build">
 					<param name="test" value="@{test.name}"/>
@@ -98,9 +217,9 @@
 			</sequential>
 		</for>
 	</target>
-	
+
 	<target name="build">
-		<echo level="info">### Building single test ###</echo>
+		<echo level="info">### Building single test: ${test} ###</echo>
 		<!-- build util -->
 		<if>
 			<not><isset property="test" /></not>
@@ -142,31 +261,31 @@
 			</else>
 		</if>
 	</target>
-	
+
 	<target name="all-html">
 		<antcall target="all">
 			<param name="defaults.buildtarget" value="-build-html"/>
 		</antcall>
 	</target>
-	
+
 	<target name="all-widget">
 		<antcall target="all">
 			<param name="defaults.buildtarget" value="-build-widget"/>
 		</antcall>
 	</target>
-	
+
 	<target name="build-html">
 		<antcall target="build">
 			<param name="defaults.buildtarget" value="-build-html"/>
 		</antcall>
 	</target>
-	
+
 	<target name="build-widget">
 		<antcall target="build">
 			<param name="defaults.buildtarget" value="-build-widget"/>
 		</antcall>
 	</target>
-	
+
     <!-- writes the available tests to the console -->
 	<target name="echoTestfiles" depends="-collectTestNames">
 		<echo>${line.separator}### Available tests ###${line.separator}</echo>
@@ -177,58 +296,104 @@
 		</for>
 		<echo>${line.separator}</echo>
     </target>
-	
-	
+
+
 <!--
 	internal targets
 -->
-	<target 
-		name="-build-html" 
-		description="Builds the html files for a single test"
-		depends="-specializeTemplates">		
+	<target	name="-build-html" description="Builds the html files for a single test">
+		<mkdir dir="${dirs.dist-html}"/>
 		
-		<!-- Create the whatever-test-name.html, by copying the index.html into it. -->
-		<propertyregex 
-			override="true" 
-			property="_htmlDestFile" 
+		<!-- create html file -->
+		<propertyregex
+			override="true"
+			property="_htmlDestFile"
 			input="${test}"
 			defaultvalue="${test}"
-			regexp="/" 
-			replace="-" 
+			regexp="/"
+			replace="-"
 			global="true"/>
-		<copy file="${dirs.test-src}/index.html" tofile="${dirs.test-src}/tests-${_htmlDestFile}.html"/>
-		
+		<rhinotpl 
+			testfile="${testfile}" 
+			outfile="${dirs.dist-html}/tests-${_htmlDestFile}.html" 
+			templatefile="${dirs.src}/index.html.tpl"/>
+
 		<!-- Copy test runner includes -->
-		<copy todir="${dirs.test-src}/_testsuite_" preservelastmodified="true">
-			<fileset dir="${dirs.src}/includes">
-				<include name="css/**"/>
-				<include name="img/**"/>
-				<include name="js/**"/>
-			</fileset>
-		</copy>
+		<copytestrunner todir="${dirs.dist-html}"/>
+		
+		<!-- Copy needed resources -->
+		<copyresources test="${test}" todir="${dirs.dist-html}"/>
 	</target>
-	
-	<target name="-build-widget" 
+
+	<target name="-build-widget"
 		description="Builds a widget for a single test"
-		depends="-build-html, -setFileNameForTest">
-		<mkdir dir="${dirs.dist}"/>
-		<zip destfile="${dirs.dist}/${test.filename}.wgt">
-			<fileset dir="${dirs.test-src}">
-				<include name="index.html"/>
-				<include name="config.xml"/>
-				<include name="_testsuite_/**"/>
-				<include name="${test}.js"/>
+		depends="-setFileNameForTest">
+		
+		<!-- create temp dir -->
+		<mkdir dir="${dirs.dist-widget}"/>
+		<tempfile destdir="${dirs.tmp}" property="widget.buildDir"/>
+		<mkdir dir="${widget.buildDir}"/>
+		
+		<!-- copy test file -->
+		<copy file="${testfile}" tofile="${widget.buildDir}/${test}.js"/>
+		
+		<!-- create html file -->
+		<rhinotpl 
+			testfile="${widget.buildDir}/${test}.js" 
+			outfile="${widget.buildDir}/index.html" 
+			templatefile="${dirs.src}/index.html.tpl"/>
+		
+		<!-- create config.xml -->
+		<rhinotpl 
+			testfile="${widget.buildDir}/${test}.js" 
+			outfile="${widget.buildDir}/config.xml" 
+			templatefile="${dirs.src}/config.xml.tpl"/>
+
+		<!-- Copy test runner includes -->
+		<copytestrunner todir="${widget.buildDir}"/>
+		
+		<!-- Copy needed resources -->
+		<copyresources test="${test}" todir="${widget.buildDir}"/>
+		
+		<zip destfile="${dirs.dist-widget}/${test.filename}.wgt">
+			<fileset dir="${widget.buildDir}">
+				<include name="**"/>
 			</fileset>
 		</zip>
-	</target>
 		
-	
+		<!-- remove temp dir -->
+		<delete dir="${widget.buildDir}" includeemptydirs="true"/>
+	</target>
+
+
 	<target name="-collectTestNames">
-		<fileset id="tests.contents" 
-			dir="${dirs.test-src}/" 
-			includes="**/*.js" 
-			excludes="**/*.config.xml.js **/*.index.html.js **/_*.js _testsuite_/**" />
-		<property name="test.names" refid="tests.contents"/>
+		<!-- join the nested resources with line separator -->
+		<pathconvert property="test.names" pathsep="${line.separator}">
+			<restrict id="test.contents"
+				xmlns:rsel="antlib:org.apache.tools.ant.types.resources.selectors">
+				
+				<!-- collect tests in test directory -->
+				<fileset dir="${dirs.test-src}">
+					<include name="**/*.js"/>
+					<exclude name="**/*index.html.js"/>
+					<exclude name="**/*config.xml.js"/>
+					<exclude name="**/_*.js"/>
+				</fileset>
+				
+				<!-- 
+					exclude js files in the dist directory 
+					(may be contained by the test directory)
+				-->
+				<rsel:not>
+					<rsel:name name="${dirs.dist-html}/**"/>
+				</rsel:not>
+			</restrict>
+			
+			<!-- cut off leading source directory -->
+			<mapper>
+				<globmapper from="${dirs.test-src}/*" to="*"/>
+			</mapper>
+		</pathconvert>
 		<propertyregex override="true" property="test.names" input="${test.names}" regexp="\.js" replace="" global="true"/>
 		<propertyregex override="true" property="test.names" input="${test.names}" regexp="\\" replace="/" global="true"/>
 	</target>
@@ -238,103 +403,4 @@
 		<propertyregex override="true" property="test.filename" input="${test.filename}" regexp="/" replace="-" global="true"/>
 	</target>
 
-	<target name="-specializeTemplates" depends="">
-		<!--
-			Do the E4X magic, which means throw index.html.tpl into a Rhino (js.jar) 
-			and	let it create index.html.
-		-->
-		
-		<!-- 
-			index.html
-		-->
-		<property name="tpl.script.index" value="${testfile}" />
-		<propertyregex
-			override="true" 
-			property="tpl.script.index" 
-			input="${tpl.script.index}" 
-			regexp="\.js$" 
-			replace=".index.html.js"/>
-		<available file="${tpl.script.index}" type="file" property="tpl.script.index.isAvailable" value="true"/>
-		
-		<!-- check if {test}.index.html.js-file for given test is available (use default if not)-->
-		<if>
-			<isset property="tpl.script.index.isAvailable" />
-			<then>
-				<property name="tpl.script.index.file" value="${tpl.script.index}"/>
-			</then>
-			<else>
-				<property name="tpl.script.index.file" value="${dirs.src}/index.html.js"/>
-			</else>
-		</if>
-
-		<java jar="${dirs.tools}/js.jar" fork="true">
-			<!-- list all the js files here in the order they need to be loaded -->
-			<arg line="-f ${dirs.tools}/js/console.js"/>
-			<arg line="-f ${dirs.tools}/js/util.js"/>
-			<arg line="-f ${dirs.tools}/js/config.js"/>
-			<arg line="-f ${dirs.tools}/js/xmlHelper.js"/>
-			<!--<arg value="src/tests/base/widget-update/update0.config.xml.js"/>-->
-			<arg line="-f ${tpl.script.index.file}"/>
-			<arg line="-f ${dirs.tools}/js/file.js"/>
-			<arg line="${dirs.tools}/js/writeRenderedFile.js"/>
-			
-			<!--arguments passed to the Rhino-->
-			<!-- template file -->
-			<arg line="${dirs.src}/index.html.tpl"/>
-			
-			<!-- outfile -->
-			<arg line="${dirs.test-src}/index.html"/>
-			
-			<!-- The JavaScript test file, e.g. /src/tests/base/window.js -->
-			<arg line="${testfile}"/>
-		</java>
-		
-
-		<!--
-			config.xml
-		-->
-
-		<property name="tpl.script.config" value="${testfile}" />
-		<propertyregex
-			override="true" 
-			property="tpl.script.config" 
-			input="${tpl.script.config}" 
-			regexp="\.js$" 
-			replace=".config.xml.js"/>
-		<available file="${tpl.script.config}" type="file" property="tpl.script.config.isAvailable" value="true"/>
-		
-		<!-- check if {test}.config.xml.js-file for given test is available (use default if not)-->
-		<if>
-			<isset property="tpl.script.config.isAvailable" />
-			<then>
-				<property name="tpl.script.config.file" value="${tpl.script.config}"/>
-			</then>
-			<else>
-				<property name="tpl.script.config.file" value="${dirs.src}/config.xml.js"/>
-			</else>
-		</if>
-
-		<java jar="tools/js.jar" fork="true">
-			<!-- list all the js files here in the order they need to be loaded -->
-			<arg line="-f tools/js/console.js"/>
-			<arg line="-f tools/js/util.js"/>
-			<arg line="-f tools/js/config.js"/>
-			<arg line="-f tools/js/xmlHelper.js"/>
-			<!--<arg value="src/tests/base/widget-update/update0.config.xml.js"/>-->
-			<arg line="-f ${tpl.script.config.file}"/>
-			<arg line="-f tools/js/file.js"/>
-			<arg line="tools/js/writeRenderedFile.js"/>
-			
-			<!--arguments passed to the Rhino-->
-			<!-- template file -->
-			<arg line="${dirs.src}/config.xml.tpl"/>
-			
-			<!-- outfile -->
-			<arg line="${dirs.test-src}/config.xml"/>
-			
-			<!-- The JavaScript test file, e.g. /src/tests/base/window.js -->
-			<arg line="${testfile}"/>
-		</java>
-	</target>
-	
 </project>
