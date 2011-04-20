@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 	Copyright 2010-2011 Vodafone Group Services GmbH
-	
+
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
 	You may obtain a copy of the License at
-	
+
 		http://www.apache.org/licenses/LICENSE-2.0
-	
+
 	Unless required by applicable law or agreed to in writing, software
 	distributed under the License is distributed on an "AS IS" BASIS,
 	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -183,25 +183,25 @@
 			</else>
 		</if>
 	</target>
-	
+
 	<target name="help" description="Output a usage message.">
 	<echo>
 	HELP:
 	=====
-	    	  	
-	Run from the tests directory with 
+
+	Run from the tests directory with
 	    ant -f &lt;path/to/build.xml&gt; &lt;options&gt;
-	    	  	
-	However, the test source directory can be set manually via the 
+
+	However, the test source directory can be set manually via the
 	`dirs.test-src` property.
-	    	  	
-	
+
+
 	Examples:
 	=========
-	
+
 	Build a single test:
 	    ant -f  &lt;path/to/build.xml&gt; -Dtest=&lt;testname&gt; (e.g. ant -Dtest=jil/File)
-	
+
 	Build all tests: ant all
 	    ant -f  &lt;path/to/build.xml&gt; all
 </echo>
@@ -217,7 +217,7 @@
 			</sequential>
 		</for>
 	</target>
-	
+
 	<target name="build">
 		<echo level="info">### Building single test: ${test} ###</echo>
 		<!-- build util -->
@@ -261,31 +261,31 @@
 			</else>
 		</if>
 	</target>
-	
+
 	<target name="all-html">
 		<antcall target="all">
 			<param name="defaults.buildtarget" value="-build-html"/>
 		</antcall>
 	</target>
-	
+
 	<target name="all-widget">
 		<antcall target="all">
 			<param name="defaults.buildtarget" value="-build-widget"/>
 		</antcall>
 	</target>
-	
+
 	<target name="build-html">
 		<antcall target="build">
 			<param name="defaults.buildtarget" value="-build-html"/>
 		</antcall>
 	</target>
-	
+
 	<target name="build-widget">
 		<antcall target="build">
 			<param name="defaults.buildtarget" value="-build-widget"/>
 		</antcall>
 	</target>
-	
+
     <!-- writes the available tests to the console -->
 	<target name="echoTestfiles" depends="-collectTestNames">
 		<echo>${line.separator}### Available tests ###${line.separator}</echo>
@@ -296,8 +296,8 @@
 		</for>
 		<echo>${line.separator}</echo>
     </target>
-	
-	
+
+
 <!--
 	internal targets
 -->
@@ -416,18 +416,18 @@
 			<arg line="-f ${tpl.script.index.file}"/>
 			<arg line="-f ${dirs.tools}/js/file.js"/>
 			<arg line="${dirs.tools}/js/writeRenderedFile.js"/>
-			
+
 			<!--arguments passed to the Rhino-->
 			<!-- template file -->
 			<arg line="${dirs.src}/index.html.tpl"/>
-			
+
 			<!-- outfile -->
 			<arg line="${dirs.test-src}/index.html"/>
-			
+
 			<!-- The JavaScript test file, e.g. /src/tests/base/window.js -->
 			<arg line="${testfile}"/>
 		</java>
-		
+
 
 		<!--
 			config.xml
@@ -463,17 +463,17 @@
 			<arg line="-f ${tpl.script.config.file}"/>
 			<arg line="-f tools/js/file.js"/>
 			<arg line="tools/js/writeRenderedFile.js"/>
-			
+
 			<!--arguments passed to the Rhino-->
 			<!-- template file -->
 			<arg line="${dirs.src}/config.xml.tpl"/>
-			
+
 			<!-- outfile -->
 			<arg line="${dirs.test-src}/config.xml"/>
-			
+
 			<!-- The JavaScript test file, e.g. /src/tests/base/window.js -->
 			<arg line="${testfile}"/>
 		</java>
 	</target>
-	
+
 </project>
