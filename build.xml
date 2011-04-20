@@ -41,13 +41,19 @@
 	
 	<!-- test sources -->
 	<property name="dirs.test-src" location="${user.dir}"/>
+
+	<!-- dist dir for built tests -->
+	<property name="dirs.dist" location="${dirs.test-src}/dist"/>
+
+	<!-- dist dir for built html tests -->
+	<property name="dirs.dist-html" location="${dirs.dist}"/>
 	
-	<!-- built widgets -->
-	<property name="dirs.dist" location="${dirs.test-src}"/>
-	
+	<!-- dist dir for built test widgets -->
+	<property name="dirs.dist-widget" location="${dirs.dist}"/>
+
 	<!-- tmp files -->
-	<property name="tmp" location="${dirs.test-src}/_tmp_" description="temporary folder to use, during build-process"/>
-	
+	<property name="dirs.tmp" location="${dirs.test-src}/_tmp_" description="temporary folder to use, during build-process"/>
+
 	<property name="defaults.buildtarget" value="-build-html"/>
 	
 <!-- 
