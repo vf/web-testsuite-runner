@@ -301,30 +301,28 @@
 <!--
 	internal targets
 -->
-	<target 
-		name="-build-html" 
-		description="Builds the html files for a single test"
-		depends="-specializeTemplates">		
+	<target	name="-build-html" description="Builds the html files for a single test">
+		<mkdir dir="${dirs.dist-html}"/>
 		
-		<!-- Create the whatever-test-name.html, by copying the index.html into it. -->
-		<propertyregex 
-			override="true" 
-			property="_htmlDestFile" 
+		<!-- create html file -->
+		<propertyregex
+			override="true"
+			property="_htmlDestFile"
 			input="${test}"
 			defaultvalue="${test}"
-			regexp="/" 
-			replace="-" 
+			regexp="/"
+			replace="-"
 			global="true"/>
-		<copy file="${dirs.test-src}/index.html" tofile="${dirs.test-src}/tests-${_htmlDestFile}.html"/>
-		
+		<rhinotpl 
+			testfile="${testfile}" 
+			outfile="${dirs.dist-html}/tests-${_htmlDestFile}.html" 
+			templatefile="${dirs.src}/index.html.tpl"/>
+
 		<!-- Copy test runner includes -->
-		<copy todir="${dirs.test-src}/_testsuite_" preservelastmodified="true">
-			<fileset dir="${dirs.src}/includes">
-				<include name="css/**"/>
-				<include name="img/**"/>
-				<include name="js/**"/>
-			</fileset>
-		</copy>
+		<copytestrunner todir="${dirs.dist-html}"/>
+		
+		<!-- Copy needed resources -->
+		<copyresources test="${test}" todir="${dirs.dist-html}"/>
 	</target>
 	
 	<target name="-build-widget" 
