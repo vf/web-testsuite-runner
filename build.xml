@@ -209,7 +209,7 @@
 
 	<target name="all" description="This target builds widgets for all tests." depends="-collectTestNames">
 		<echo level="info">### Building all tests ###</echo>
-		<for list="${test.names}" param="test.name" delimiter=";">
+		<for list="${test.names}" param="test.name" delimiter="${line.separator}">
 			<sequential>
 				<antcall target="build">
 					<param name="test" value="@{test.name}"/>
@@ -340,14 +340,36 @@
 			</fileset>
 		</zip>
 	</target>
-		
-	
+
+
 	<target name="-collectTestNames">
-		<fileset id="tests.contents" 
-			dir="${dirs.test-src}/" 
-			includes="**/*.js" 
-			excludes="**/*.config.xml.js **/*.index.html.js **/_*.js _testsuite_/**" />
-		<property name="test.names" refid="tests.contents"/>
+		<!-- join the nested resources with line separator -->
+		<pathconvert property="test.names" pathsep="${line.separator}">
+			<restrict id="test.contents"
+				xmlns:rsel="antlib:org.apache.tools.ant.types.resources.selectors">
+				
+				<!-- collect tests in test directory -->
+				<fileset dir="${dirs.test-src}">
+					<include name="**/*.js"/>
+					<exclude name="**/*index.html.js"/>
+					<exclude name="**/*config.xml.js"/>
+					<exclude name="**/_*.js"/>
+				</fileset>
+				
+				<!-- 
+					exclude js files in the dist directory 
+					(may be contained by the test directory)
+				-->
+				<rsel:not>
+					<rsel:name name="${dirs.dist-html}/**"/>
+				</rsel:not>
+			</restrict>
+			
+			<!-- cut off leading source directory -->
+			<mapper>
+				<globmapper from="${dirs.test-src}/*" to="*"/>
+			</mapper>
+		</pathconvert>
 		<propertyregex override="true" property="test.names" input="${test.names}" regexp="\.js" replace="" global="true"/>
 		<propertyregex override="true" property="test.names" input="${test.names}" regexp="\\" replace="/" global="true"/>
 	</target>
