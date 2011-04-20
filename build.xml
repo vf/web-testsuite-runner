@@ -219,7 +219,7 @@
 	</target>
 	
 	<target name="build">
-		<echo level="info">### Building single test ###</echo>
+		<echo level="info">### Building single test: ${test} ###</echo>
 		<!-- build util -->
 		<if>
 			<not><isset property="test" /></not>
